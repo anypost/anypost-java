@@ -1,0 +1,11 @@
+# Maven build output
+target/
+
+# Compiled class files
+*.class
+
+# Editor/OS noise
+.DS_Store
+.idea/
+*.iml
+.vscode/
