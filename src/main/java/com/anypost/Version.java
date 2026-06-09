@@ -8,7 +8,7 @@ package com.anypost;
  * The release workflow publishes that tag to Maven Central.
  */
 final class Version {
-    static final String VERSION = "0.1.0";
+    static final String VERSION = "1.0.0";
 
     private Version() {}
 }
