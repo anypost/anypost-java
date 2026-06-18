@@ -24,6 +24,8 @@ import java.util.List;
  * @param bounceType           the bounce type (only on {@code email.bounced}), or {@code null}
  * @param bounceClassification the bounce classification (only on {@code email.bounced}), or {@code null}
  * @param attempt              the delivery attempt number, or {@code null} for non-delivery events
+ * @param tracking             tracking metadata mirroring the webhook payload's {@code data.tracking};
+ *                             {@code null} except on opens/clicks, and on human opens/clicks
  */
 public record Event(
         String id,
@@ -42,4 +44,5 @@ public record Event(
         Integer smtpCode,
         String bounceType,
         String bounceClassification,
-        Integer attempt) {}
+        Integer attempt,
+        EventTracking tracking) {}
