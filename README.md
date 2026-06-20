@@ -5,6 +5,8 @@ The official Java client for the [Anypost](https://anypost.com) email API.
 Requires Java 17+. One dependency (Jackson) for JSON; HTTP is the JDK's built-in
 client. Instances are immutable and safe to share across threads.
 
+This README covers the SDK itself: installation, idioms, and configuration. For platform concepts and the full field-level API reference, see the [Anypost documentation](https://anypost.com/docs).
+
 ## Install
 
 Maven:
@@ -13,14 +15,14 @@ Maven:
 <dependency>
   <groupId>com.anypost</groupId>
   <artifactId>anypost-java</artifactId>
-  <version>0.1.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```groovy
-implementation("com.anypost:anypost-java:0.1.0")
+implementation("com.anypost:anypost-java:1.1.0")
 ```
 
 ## Quickstart
@@ -33,10 +35,10 @@ import com.anypost.model.SendResponse;
 Anypost client = Anypost.create("ap_your_api_key");
 
 SendResponse sent = client.email.send(SendEmailRequest.builder()
-        .from("Acme <you@yourdomain.com>")
-        .to("someone@example.com")
-        .subject("Hello from Anypost")
-        .html("<p>It worked.</p>")
+        .from("YourCo <you@yourdomain.com>")
+        .to("you@example.com")
+        .subject("Welcome to Anypost")
+        .html("<p>Hello, inbox!</p>")
         .build());
 
 System.out.println(sent.id());
@@ -52,7 +54,7 @@ and `bcc` share one envelope and count against a combined limit of 50.
 
 ```java
 client.email.send(SendEmailRequest.builder()
-        .from("Acme <you@yourdomain.com>")
+        .from("YourCo <you@yourdomain.com>")
         .to("a@example.com", "b@example.com")
         .cc("team@example.com")
         .replyTo("support@yourdomain.com")
@@ -63,7 +65,7 @@ client.email.send(SendEmailRequest.builder()
         .build());
 ```
 
-`Attachment` content is the raw file bytes &mdash; pass what `Files.readAllBytes`
+`Attachment` content is the raw file bytes. Pass what `Files.readAllBytes`
 returns and the SDK base64-encodes it on the wire. Do not pre-encode it. The
 request body is capped at 5 MB.
 
@@ -71,7 +73,7 @@ request body is capped at 5 MB.
 byte[] pdf = Files.readAllBytes(Path.of("report.pdf"));
 
 client.email.send(SendEmailRequest.builder()
-        .from("you@yourdomain.com")
+        .from("YourCo <you@yourdomain.com>")
         .to("someone@example.com")
         .subject("Your report")
         .text("Attached.")
@@ -83,13 +85,15 @@ Send with a published template and per-recipient variables:
 
 ```java
 client.email.send(SendEmailRequest.builder()
-        .from("you@yourdomain.com")
+        .from("YourCo <you@yourdomain.com>")
         .to("someone@example.com")
         .templateId("template_018f2c5e-3a40-7a91-9c25-3a0b1d5e6f78")
         .variable("name", "Ada")
         .variable("plan", "pro")
         .build());
 ```
+
+See the [send reference](https://anypost.com/docs/reference/emails) for the complete field list.
 
 ## Batch
 
@@ -99,7 +103,7 @@ the default; an entry that sets its own value wins. `to` is always per-entry.
 
 ```java
 BatchResponse result = client.email.sendBatch(EmailBatchRequest.builder()
-        .defaults(SendEmailRequest.builder().from("you@yourdomain.com").build())
+        .defaults(SendEmailRequest.builder().from("YourCo <you@yourdomain.com>").build())
         .email(SendEmailRequest.builder().to("a@example.com").subject("Hi A").text("...").build())
         .email(SendEmailRequest.builder().to("b@example.com").subject("Hi B").text("...").build())
         .build());
@@ -130,19 +134,15 @@ Domain domain = client.domains.create(DomainCreateParams.of("example.com"));
 for (DnsRecord r : domain.dnsRecords()) {
     System.out.println(r.type() + " " + r.name() + " -> " + r.value());
 }
-```
 
-`verify` always returns the current domain &mdash; a still-`pending` domain is not
-an error. Read its status and verification failure, and poll while DNS propagates.
-
-```java
 Domain checked = client.domains.verify(domain.id());
-if (!"verified".equals(checked.status()) && checked.verificationFailure() != null) {
+if (!"verified".equals(checked.status())) {
+    // verify returns the current domain even while pending; it never throws
     System.out.println(checked.verificationFailure().code());
 }
 ```
 
-`get`, `update` (tracking config only), and `delete` round out the resource.
+`get`, `update` (tracking config only), and `delete` round out the resource. See [Domains](https://anypost.com/docs/reference/domains) for the verification lifecycle and field reference.
 
 ## API keys
 
@@ -159,8 +159,7 @@ ApiKeyWithSecret created = client.apiKeys.create(ApiKeyCreateParams.builder()
 System.out.println(created.key()); // store now; never retrievable again
 ```
 
-`get` returns metadata only &mdash; `keyPrefix()`, never the secret. Permission and
-restriction changes take up to 5 minutes to propagate through the gateway cache.
+`get` returns metadata only (`keyPrefix()`, never the secret); `update` and `delete` round out the resource. See [API keys](https://anypost.com/docs/reference/api-keys) for the permission model and cache propagation.
 
 ## Templates
 
@@ -174,23 +173,18 @@ Template tmpl = client.templates.create(TemplateCreateParams.builder()
         .html("<h1>Welcome, {{ name }}</h1>")
         .build());
 
-client.templates.updateDraft(tmpl.id(), TemplateDraftParams.builder()
-        .subject("Welcome to Acme")
-        .html("<h1>Welcome, {{ name }}</h1>")
-        .build());
-
 client.templates.publish(tmpl.id());
 ```
 
-`kind` is `html` or `markdown` and is immutable once set. `getDraft`,
+`kind` (`html` or `markdown`) is immutable once set. `getDraft`, `updateDraft`,
 `deleteDraft`, `duplicate`, `get`, `update` (name only), and `delete` round out
-the resource. Send with a published template via `templateId` (see [Sending](#sending)).
+the resource. Send with a published template via `templateId` (see [Sending](#sending)). See [Templates](https://anypost.com/docs/reference/templates) for the full model.
 
 ## Suppressions
 
 A suppression blocks sends to an address, scoped to a `topic`. The wildcard `*`
-blocks every topic; a specific topic (e.g. `marketing`) leaves transactional
-traffic untouched. Bounces and complaints write `*` automatically.
+blocks every topic; a named topic (e.g. `marketing`) leaves transactional
+traffic untouched.
 
 ```java
 client.suppressions.create(SuppressionCreateParams.builder()
@@ -199,16 +193,10 @@ client.suppressions.create(SuppressionCreateParams.builder()
         .note("Customer requested removal")
         .build());
 
-Suppression row = client.suppressions.get("alice@example.com", "*");
 client.suppressions.delete("alice@example.com", "marketing");
-
-Page<Suppression> complaints = client.suppressions.list(SuppressionListParams.builder()
-        .reason(SuppressionReason.COMPLAINT)
-        .build());
 ```
 
-`listForEmail` returns every row for an address across all topics;
-`deleteForEmail` removes them all.
+`get`, `list` (with `emailContains`, `topic`, `reason`, and `origin` filters), `listForEmail`, and `deleteForEmail` round out the resource. See [Suppressions](https://anypost.com/docs/reference/suppressions) for scoping and the automatic-suppression rules for bounces and complaints.
 
 ## Webhooks
 
@@ -225,15 +213,11 @@ WebhookWithSecret wh = client.webhooks.create(WebhookCreateParams.builder()
 System.out.println(wh.signingSecret()); // store now; never retrievable again
 ```
 
-`update` sets the name, URL, events, and status together &mdash; set the status to
-`WebhookStatus.DISABLED` to pause delivery, `ACTIVE` to resume. `test` sends one
-synthetic `webhook.test` event and returns the outcome even when the endpoint
-fails. `rotateSecret` issues a new secret and keeps the previous one valid for a
-24-hour grace window; `get`, `list`, and `delete` round out the resource.
+`update`, `test`, `rotateSecret`, `get`, `list`, and `delete` round out the resource. See [Webhooks](https://anypost.com/docs/reference/webhooks) for the event catalog, status transitions, and the secret-rotation grace window.
 
 ### Verifying deliveries
 
-`WebhookVerifier` has static methods &mdash; they need the signing secret, not an
+`WebhookVerifier` has static methods. They need the signing secret, not an
 API key, so call them in your handler without a client. Pass the **raw** request
 body (the exact bytes, before JSON parsing), the `Anypost-Signature` header, and
 the secret.
@@ -253,8 +237,8 @@ try {
 }
 ```
 
-Reach for `verifySignature` when something else has already parsed the body
-&mdash; keep the raw bytes for the verify step, then use your parsed value once it
+Reach for `verifySignature` when something else has already parsed the body.
+Keep the raw bytes for the verify step, then use your parsed value once it
 passes. Deliveries older than five minutes are rejected by default to bound
 replay; `WebhookVerifyOptions` widens, narrows, or disables (`Duration.ZERO`) that
 check, and overrides the clock in tests. During a secret rotation the header
@@ -265,7 +249,7 @@ deliveries keep verifying while you redeploy.
 
 `client.events.list` pages the team's event stream, newest-first. The window
 defaults to the last 24 hours and is clamped to your plan's retention. Events are
-read-only and not addressable by id &mdash; there is no `get`.
+read-only and not addressable by id, so there is no `get`.
 
 ```java
 Page<Event> page = client.events.list(EventListParams.builder()
@@ -278,10 +262,10 @@ for (Event e : page.data()) {
 ```
 
 Filter by `start`, `end`, `eventType`, `recipient`, `emailId`, `messageId`,
-`domain`, `topic`, `campaign`, `templateId`, and `tags`. All filters are
-exact-match, except `tags`, which matches an event carrying *any* of the given
-tags. This is also how you backfill the gap after a webhook endpoint was disabled
-&mdash; page the events that occurred during the outage once it's healthy.
+`domain`, `topic`, `campaign`, `templateId`, and `tags`, which matches an event
+carrying *any* of the given tags. Every other filter is exact-match. This is also
+how you backfill the gap after a webhook endpoint was disabled: page the events
+that occurred during the outage once it's healthy. See [Events](https://anypost.com/docs/reference/events) for the field reference.
 
 ## Pagination
 
@@ -303,7 +287,7 @@ for (Domain domain : page.all()) { // every domain, across all pages
 ## Errors
 
 A failed request throws an `AnypostException`. Branch on `type()`, the stable,
-machine-readable `error.type` &mdash; not on the HTTP status.
+machine-readable `error.type`, not on the HTTP status.
 
 ```java
 try {
