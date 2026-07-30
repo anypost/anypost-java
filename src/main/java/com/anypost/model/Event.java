@@ -20,8 +20,17 @@ import java.util.List;
  * @param templateId           the template the originating send used, or {@code null}
  * @param topic                the send-time topic, or {@code null}
  * @param tags                 the customer-supplied tags from the originating send
+ * @param ipPool               which dedicated IP pool the message egressed from, or {@code null}
+ *                             on sends that named no pool and on accounts without dedicated IPs;
+ *                             set on every event for the message, not just {@code email.sent}
  * @param smtpCode             the SMTP reply code observed, or {@code null}
- * @param bounceType           the bounce type (only on {@code email.bounced}), or {@code null}
+ * @param bounceType           why the message failed (only on {@code email.bounced}), or
+ *                             {@code null}. One of {@code permanent} (the receiver refused the
+ *                             address outright; suppressed, and what counts against list
+ *                             quality), {@code transient} (a temporary failure still unresolved
+ *                             when the message was reported), or {@code expired} (aged out of
+ *                             the retry queue after 72 hours without reaching the receiver;
+ *                             not a hard bounce, and not suppressed)
  * @param bounceClassification the bounce classification (only on {@code email.bounced}), or {@code null}
  * @param attempt              the delivery attempt number, or {@code null} for non-delivery events
  * @param tracking             tracking metadata mirroring the webhook payload's {@code data.tracking};
@@ -41,6 +50,7 @@ public record Event(
         String templateId,
         String topic,
         List<String> tags,
+        String ipPool,
         Integer smtpCode,
         String bounceType,
         String bounceClassification,

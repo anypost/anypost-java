@@ -25,6 +25,7 @@ public final class EventListParams {
     private final String topic;
     private final String campaign;
     private final String templateId;
+    private final String ipPool;
     private final List<String> tags;
 
     private EventListParams(Builder b) {
@@ -40,6 +41,7 @@ public final class EventListParams {
         this.topic = b.topic;
         this.campaign = b.campaign;
         this.templateId = b.templateId;
+        this.ipPool = b.ipPool;
         this.tags = b.tags;
     }
 
@@ -60,6 +62,7 @@ public final class EventListParams {
         query.set("topic", topic);
         query.set("campaign", campaign);
         query.set("template_id", templateId);
+        query.set("ip_pool", ipPool);
         if (tags != null && !tags.isEmpty()) {
             query.set("tags", String.join(",", tags));
         }
@@ -85,6 +88,7 @@ public final class EventListParams {
         b.topic = topic;
         b.campaign = campaign;
         b.templateId = templateId;
+        b.ipPool = ipPool;
         b.tags = tags;
         return b;
     }
@@ -103,6 +107,7 @@ public final class EventListParams {
         private String topic;
         private String campaign;
         private String templateId;
+        private String ipPool;
         private List<String> tags;
 
         public Builder limit(int limit) {
@@ -166,6 +171,18 @@ public final class EventListParams {
 
         public Builder templateId(String templateId) {
             this.templateId = templateId;
+            return this;
+        }
+
+        /**
+         * Restrict to mail that egressed from this named dedicated IP pool.
+         * Exact match against the {@code [a-z0-9]([a-z0-9-]*[a-z0-9])?}
+         * pool-name shape; a value outside it returns an empty list rather than
+         * being ignored, so a typo cannot silently widen the answer to "all
+         * pools".
+         */
+        public Builder ipPool(String ipPool) {
+            this.ipPool = ipPool;
             return this;
         }
 

@@ -262,7 +262,8 @@ for (Event e : page.data()) {
 ```
 
 Filter by `start`, `end`, `eventType`, `recipient`, `emailId`, `messageId`,
-`domain`, `topic`, `campaign`, `templateId`, and `tags`, which matches an event
+`domain`, `topic`, `campaign`, `templateId`, `ipPool`, and `tags`, which matches an
+event
 carrying *any* of the given tags. Every other filter is exact-match. This is also
 how you backfill the gap after a webhook endpoint was disabled: page the events
 that occurred during the outage once it's healthy. See [Events](https://anypost.com/docs/reference/events) for the field reference.

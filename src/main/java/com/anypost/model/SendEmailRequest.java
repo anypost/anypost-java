@@ -30,6 +30,7 @@ public record SendEmailRequest(
         List<String> tags,
         String campaign,
         String topic,
+        String ipPool,
         Tracking tracking,
         Map<String, Object> variables,
         Unsubscribe unsubscribe) {
@@ -54,6 +55,7 @@ public record SendEmailRequest(
         private List<String> tags;
         private String campaign;
         private String topic;
+        private String ipPool;
         private Tracking tracking;
         private Map<String, Object> variables;
         private Unsubscribe unsubscribe;
@@ -176,6 +178,22 @@ public record SendEmailRequest(
             return this;
         }
 
+        /**
+         * Which of your dedicated IP pools this message sends from
+         * ({@code [a-z0-9]([a-z0-9-]*[a-z0-9])?}, at most 32 characters).
+         * Accounts with dedicated IPs and more than one named pool only.
+         *
+         * <p>Unlike tags, topic and campaign this is not a reporting label: it
+         * changes how the message is delivered, keeping one stream's reputation
+         * and queueing off another's. Leave it unset to use the account's
+         * default pool; an unrecognized name returns {@code 422} listing the
+         * pools the account does have.
+         */
+        public Builder ipPool(String ipPool) {
+            this.ipPool = ipPool;
+            return this;
+        }
+
         public Builder tracking(Tracking tracking) {
             this.tracking = tracking;
             return this;
@@ -202,8 +220,8 @@ public record SendEmailRequest(
 
         public SendEmailRequest build() {
             return new SendEmailRequest(from, to, cc, bcc, replyTo, subject, text, html,
-                    templateId, headers, attachments, tags, campaign, topic, tracking,
-                    variables, unsubscribe);
+                    templateId, headers, attachments, tags, campaign, topic, ipPool,
+                    tracking, variables, unsubscribe);
         }
     }
 }

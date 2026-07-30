@@ -45,4 +45,30 @@ class EventsTest {
         // Sent comma-separated (URL-encoded); the API matches with hasAny.
         assertTrue(uri.contains("tags=welcome%2Conboarding") || uri.contains("tags=welcome,onboarding"), uri);
     }
+
+    @Test
+    void threadsIpPoolIntoQuery() {
+        MockTransport transport = new MockTransport()
+                .enqueue(200, "{\"data\":[],\"has_more\":false,\"next_cursor\":null}");
+
+        client(transport).events.list(EventListParams.builder().ipPool("marketing").build());
+
+        String uri = transport.lastRequest().uri().toString();
+        assertTrue(uri.contains("ip_pool=marketing"), uri);
+    }
+
+    @Test
+    void deserializesIpPoolOffAnEvent() {
+        String body = "{\"data\":["
+                + "{\"id\":\"evt_pooled\",\"type\":\"email.delivered\",\"ip_pool\":\"marketing\"},"
+                + "{\"id\":\"evt_shared\",\"type\":\"email.delivered\",\"ip_pool\":null}"
+                + "],\"has_more\":false,\"next_cursor\":null}";
+        MockTransport transport = new MockTransport().enqueue(200, body);
+
+        Page<Event> page = client(transport).events.list();
+
+        assertEquals("marketing", page.data().get(0).ipPool());
+        // Null on sends that named no pool, and on accounts without dedicated IPs.
+        assertNull(page.data().get(1).ipPool());
+    }
 }
