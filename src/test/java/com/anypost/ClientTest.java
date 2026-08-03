@@ -27,7 +27,8 @@ class ClientTest {
     @Test
     void assemblesAuthAndDefaultHeaders() throws Exception {
         MockTransport transport = new MockTransport()
-                .enqueue(200, "{\"team\":{\"id\":\"team_1\",\"name\":\"Acme\"},\"api_key\":{\"id\":\"key_1\",\"permissions\":\"full\"}}");
+                .enqueue(200, "{\"team\":{\"id\":\"team_1\",\"name\":\"Acme\"},\"api_key\":{\"id\":\"key_1\",\"permissions\":\"full\"},"
+                        + "\"limits\":{\"daily\":5000,\"monthly\":100000,\"delivery_rate_per_minute\":600}}");
         Anypost anypost = Anypost.builder("ap_secret")
                 .baseUrl("https://api.test/v1")
                 .maxRetries(0)
@@ -39,6 +40,9 @@ class ClientTest {
 
         assertEquals("team_1", me.team().id());
         assertEquals(Permissions.FULL, me.apiKey().permissions());
+        assertEquals(5000, me.limits().daily());
+        assertEquals(100000, me.limits().monthly());
+        assertEquals(600, me.limits().deliveryRatePerMinute());
 
         var request = transport.lastRequest();
         assertEquals("GET", request.method());
