@@ -65,8 +65,10 @@ client.email.send(SendEmailRequest.builder()
         .build());
 ```
 
-`Attachment` content is the raw file bytes. Pass what `Files.readAllBytes`
-returns and the SDK base64-encodes it on the wire. Do not pre-encode it. The
+`Attachment.of` takes the raw file bytes: pass what `Files.readAllBytes`
+returns and the SDK base64-encodes them on the wire. When the content is already
+base64 at rest, use `Attachment.ofBase64` instead — that string is sent verbatim,
+so nothing is decoded just to be re-encoded. Set exactly one of the two. The
 request body is capped at 5 MB.
 
 ```java

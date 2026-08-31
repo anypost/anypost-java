@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmailTest {
@@ -62,6 +63,56 @@ class EmailTest {
         JsonNode body = TestSupport.MAPPER.readTree(TestSupport.bodyOf(transport.lastRequest()));
         String encoded = body.get("attachments").get(0).get("content").asText();
         assertArrayEquals(raw, Base64.getDecoder().decode(encoded));
+    }
+
+    @Test
+    void base64AttachmentContentIsSentUnchanged() throws Exception {
+        MockTransport transport = new MockTransport().enqueue(202, SEND_OK);
+        String alreadyEncoded = Base64.getEncoder().encodeToString(new byte[] {1, 2, 3, 4, 5});
+        client(transport).email.send(SendEmailRequest.builder()
+                .from("a@example.com").to("b@example.com").subject("S").text("T")
+                .attachment(Attachment.ofBase64("f.bin", alreadyEncoded, "application/octet-stream"))
+                .build());
+
+        JsonNode attachment = TestSupport.MAPPER
+                .readTree(TestSupport.bodyOf(transport.lastRequest()))
+                .get("attachments").get(0);
+        assertEquals(alreadyEncoded, attachment.get("content").asText());
+        assertEquals("application/octet-stream", attachment.get("content_type").asText());
+        // The wire object carries only `content` — no second content property leaks out.
+        assertNull(attachment.get("content_base64"));
+    }
+
+    @Test
+    void inlineBase64AttachmentCarriesItsContentId() throws Exception {
+        MockTransport transport = new MockTransport().enqueue(202, SEND_OK);
+        String alreadyEncoded = Base64.getEncoder().encodeToString(new byte[] {9, 9, 9});
+        client(transport).email.send(SendEmailRequest.builder()
+                .from("a@example.com").to("b@example.com").subject("S").html("<img src=\"cid:logo\">")
+                .attachment(Attachment.inlineBase64("logo.png", alreadyEncoded, "image/png", "logo"))
+                .build());
+
+        JsonNode attachment = TestSupport.MAPPER
+                .readTree(TestSupport.bodyOf(transport.lastRequest()))
+                .get("attachments").get(0);
+        assertEquals(alreadyEncoded, attachment.get("content").asText());
+        assertEquals("logo", attachment.get("content_id").asText());
+    }
+
+    @Test
+    void attachmentWithBothContentFormsIsRejected() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Attachment("f.bin", new byte[] {1}, "AQ==", null, null));
+        assertTrue(ex.getMessage().contains("f.bin"));
+    }
+
+    @Test
+    void attachmentWithNoContentIsRejected() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Attachment("empty.bin", null, null, null, null));
+        assertTrue(ex.getMessage().contains("empty.bin"));
     }
 
     @Test
