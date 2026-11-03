@@ -15,14 +15,14 @@ Maven:
 <dependency>
   <groupId>com.anypost</groupId>
   <artifactId>anypost-java</artifactId>
-  <version>1.1.0</version>
+  <version>1.5.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```groovy
-implementation("com.anypost:anypost-java:1.1.0")
+implementation("com.anypost:anypost-java:1.5.0")
 ```
 
 ## Quickstart
