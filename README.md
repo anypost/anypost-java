@@ -15,14 +15,14 @@ Maven:
 <dependency>
   <groupId>com.anypost</groupId>
   <artifactId>anypost-java</artifactId>
-  <version>1.1.0</version>
+  <version>1.5.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```groovy
-implementation("com.anypost:anypost-java:1.1.0")
+implementation("com.anypost:anypost-java:1.5.0")
 ```
 
 ## Quickstart
@@ -197,6 +197,18 @@ client.suppressions.create(SuppressionCreateParams.builder()
 
 client.suppressions.delete("alice@example.com", "marketing");
 ```
+
+Add up to 1,000 at once with `createBatch`:
+
+```java
+SuppressionBatchResult result = client.suppressions.createBatch(List.of(
+        SuppressionBatchItem.builder().email("alice@example.com").build(),
+        SuppressionBatchItem.builder().email("bob@example.com").reason("hard bounce").build()));
+
+System.out.println(result.imported() + " imported, " + result.alreadySuppressed() + " already suppressed");
+```
+
+Addresses that are already suppressed are counted and left unchanged, so a batch is safe to retry. Invalid addresses come back in `result.invalid()` instead of failing the batch.
 
 `get`, `list` (with `emailContains`, `topic`, `reason`, and `origin` filters), `listForEmail`, and `deleteForEmail` round out the resource. See [Suppressions](https://anypost.com/docs/reference/suppressions) for scoping and the automatic-suppression rules for bounces and complaints.
 

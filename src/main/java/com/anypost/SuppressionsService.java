@@ -1,9 +1,12 @@
 package com.anypost;
 
 import com.anypost.model.Suppression;
+import com.anypost.model.SuppressionBatchItem;
+import com.anypost.model.SuppressionBatchResult;
 import com.anypost.model.SuppressionCreateParams;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * The {@code /suppressions} operations. Entries key on {@code (email, topic)}.
@@ -17,7 +20,7 @@ public final class SuppressionsService {
         this.executor = executor;
     }
 
-    /** One page of the team's suppressions, newest-first. Expired rows are filtered out. */
+    /** One page of the team's suppressions, newest-first. */
     public Page<Suppression> list() {
         return list(SuppressionListParams.DEFAULT, null);
     }
@@ -48,6 +51,22 @@ public final class SuppressionsService {
 
     public Suppression create(SuppressionCreateParams params, RequestOptions options) {
         return executor.request("POST", "/suppressions", params, false, null, options, Suppression.class);
+    }
+
+    /**
+     * Adds up to 1,000 suppressions in one call. Entries already suppressed are
+     * counted in {@code alreadySuppressed} and left unchanged, so a batch is safe to
+     * retry. Invalid addresses come back in {@code invalid} instead of failing the
+     * batch. Throws a validation error (nothing is added) if the batch is empty,
+     * has more than 1,000 entries, or would pass the team's suppression limit.
+     */
+    public SuppressionBatchResult createBatch(List<SuppressionBatchItem> items) {
+        return createBatch(items, null);
+    }
+
+    public SuppressionBatchResult createBatch(List<SuppressionBatchItem> items, RequestOptions options) {
+        return executor.request("POST", "/suppressions/batch", Map.of("suppressions", items), false, null, options,
+                SuppressionBatchResult.class);
     }
 
     /**

@@ -12,7 +12,7 @@ package com.anypost.model;
  * @param smtpCode       the SMTP reply code from the bounce, or {@code null}
  * @param note           a free-form note attached at creation, or {@code null}
  * @param suppressedAt   when the suppression was first observed
- * @param expiresAt      when it stops applying, or {@code null} for never
+ * @param expiresAt      always {@code null}: suppressions do not expire. Kept for compatibility and will be removed in a future major version
  * @param createdAt      the creation timestamp
  */
 public record Suppression(
